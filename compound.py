@@ -63,19 +63,23 @@ class Compound:
 
         
     def CP_liquid(self, T, Report = False):
+        # Liquid heat capacity, Perrys' handobook method.
+        # T is a temperature which LCP will be calculated.
+        # Report is a boolean, if True, then print the result.
 
+        # Convert temperature units into Kelvin,
         T = U.Temperature_Converter(T, "K")
-               
+        # Equation 2 for calculating LCP     
         eq2 = ["1,2-Butanediol", "1,3-Butanediol", "Carbon monoxide", \
                "1,1-Difluoroethane", "Ethane", "Heptane", "Hydrogen", \
                "Hydrogen sulfide", "Methane", "Propane"]
-        
+        # Read parameters from the database
         C1 = self.data.loc[self.name, "CPLC1"]
         C2 = self.data.loc[self.name, "CPLC2"]
         C3 = self.data.loc[self.name, "CPLC3"]
         C4 = self.data.loc[self.name, "CPLC4"]
         C5 = self.data.loc[self.name, "CPLC5"]
-        
+        # Equaion 2
         if self.name in eq2:
             
             Tr = T[0] / U.Temperature_Converter(self.Tc,"K")[0]
@@ -87,7 +91,7 @@ class Compound:
             pass
         
         else:
-
+        # Equation 1
             CPL = C1 +( C2 * T[0]) +( C3 * (T[0] **2)) +( C4 * (T[0] ** 3)) + (C5 * (T[0] ** 4))
             
         self.CPl = [CPL, 'J/kmol*K']
