@@ -3,7 +3,6 @@ import numpy as np
 from scipy.integrate import quad
 import pandas as pd
 from simulator import *
-from units import *
 
 U = UnitConverter()
 S = Simulator()
@@ -12,35 +11,33 @@ class Compound:
     
     def __init__(self, name, mw = None, Perry = True):
         
-        self.name = name
+        self.name = name            # Compound name
         # Pure properties
-        self.mw = mw
-        self.Hig_f = [None, None]
-        self.Gig_f = [None, None]
-        self.Sig = [None, None]
-        self.Hstd_c = [None, None]
-        self.acentric = None
-        self.dipole = [None, None]
-        self.Heat_f = [None, None]         
+        self.mw = mw                # molecular weight
+        self.Hig_f = [None, None]   # ideal gas enthalpy of formation
+        self.Gig_f = [None, None]   # ideal gas Gibbs free energy of formation
+        self.Sig = [None, None]     # ideal gas entropy
+        self.Hstd_c = [None, None]  # standard heat of combustion
+        self.acentric = None        # acentric factor
+        self.dipole = [None, None]  # magnetic dipole
         # Critical properties
-        self.Tc = [None, None]
-        self.Pc = [None, None]
-        self.Vmc = [None, None]
-        self.Zc = None
+        self.Tc = [None, None]      # critical temperature
+        self.Pc = [None, None]      # critical pressure
+        self.Vmc = [None, None]     # critical molar volume
+        self.Zc = None              # critical compressibility factor
         # Thermodynamic properties
-        self.Z = None
-        self.Pvap = [None, None]
-        self.mCPig = [None, None]
-        self.mCPl = [None, None]
-        self.CPig = [None, None]
-        self.CPl = [None, None]
-        self.LMV = [None, None]
-        self.density = [None, None]
+        self.Z = None               # compresibility factor
+        self.Pvap = [None, None]    # vapor pressure
+        self.mCPig = [None, None]   # mean ideas gas heat capacity
+        self.mCPl = [None, None]    # mean liquid heat capacity    
+        self.CPig = [None, None]    # ideal gas heat capacity
+        self.CPl = [None, None]     # liquid heat capacity
+        self.density = [None, None] # density
         # Transport properties
-        self.GasVis = [None, None]
-        self.LiqVis = [None, None]
-        self.GasTC = [None, None]
-        self.LiqTC = [None, None]
+        self.GasVis = [None, None]  # gas viscosity
+        self.LiqVis = [None, None]  # liquid viscosity
+        self.GasTC = [None, None]   # gas thermal conductivity
+        self.LiqTC = [None, None]   # liquid therml conductivity
 
         if Perry:
             # data
@@ -62,13 +59,17 @@ class Compound:
             self.data = None
 
         
-    def CP_liquid(self, T, Report = False):
+    def CP_liquid(self, T, units = "K", Report = False, f_output = False):
         # Liquid heat capacity, Perrys' handobook method.
         # T is a temperature which LCP will be calculated.
         # Report is a boolean, if True, then print the result.
 
-        # Convert temperature units into Kelvin,
-        T = U.Temperature_Converter(T, "K")
+        # Convert temperature units into Kelvin.
+        if isinstance(T,(int, float)):
+            T = [T, units]
+
+        else:
+            T = U.Temperature_Converter(T, "K")
         # Equation 2 for calculating LCP     
         eq2 = ["1,2-Butanediol", "1,3-Butanediol", "Carbon monoxide", \
                "1,1-Difluoroethane", "Ethane", "Heptane", "Hydrogen", \
@@ -98,17 +99,40 @@ class Compound:
         
             
         if Report:
-            return print(f'The Liquid Heat Capacity of {self.name} is {self.CPl[0]:,.2f} {self.CPl[1]}')
+            print(f'The Liquid Heat Capacity of {self.name} is {self.CPl[0]:,.2f} {self.CPl[1]}')
+
+        if f_output:
+            return CPL#, 'J/kmol*K'
         
+    def mean_CP(self, f_CP, T1, T2, units, phase, Report = False):
+        # This method calculate de mean heat capacity
+        T1 = U.Temperature_Converter(T1,"K")
+        T2 = U.Temperature_Converter(T2,"K")
+        mCP, err = quad(f_CP, T1[0], T2[0], args = (T1[1], False, True))
+        S.add_warning(f'The integral error for the mean heat capacity of {self.name} is {err:.2e}.') ## ADD TIME
         
+        if phase == "liquid":
+            self.mCPl = [mCP / (T2[0] - T1[0]), units]
+
+            if Report:
+                print(f'The Mean Liquid Heat Capacity of {self.name} is {self.mCPl[0]:,.2f} {self.mCPl[1]}')
+
+        elif phase == "gas":
+            self.mCPig = [mCP / (T2[0] - T1[0]), units]
+            if Report:
+                print(f'The Mean Ideal gas Heat Capacity of {self.name} is {self.mCPig[0]:,.2f} {self.mCPig[1]}')
+            
+
 
         
         
 if __name__ == '__main__':
     A = Compound("Water")
     A.CP_liquid([533.15, "K"],Report = True)
+    A.mean_CP(A.CP_liquid, [273, "K"], [450, "K"], "J/kmol*K", "liquid", True)
     E = Compound("Ethane")
     E.CP_liquid([290, "K"], Report = True)
+    E.mean_CP(E.CP_liquid, [260, "K"], [290, "K"],"J/kmol*K", "liquid", True)
     
         
         
