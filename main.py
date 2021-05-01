@@ -1,7 +1,7 @@
 from simulator import *
 from compound import *
 
-
+S = Simulator()
 T1 = Temperature(533.15, "K")
 T2 = Temperature(290, "K")
 T3 = Temperature(273, "K")

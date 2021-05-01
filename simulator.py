@@ -14,11 +14,11 @@ class Simulator:
         return self.database
 
     # This method add severe errors
-    def add_errors(self, new_error):
+    def add_error(self, new_error):
         self.errors.append(new_error)
 
     # This method display the errors
-    def show_erros(self):
+    def show_errors(self):
         for i in self.errors:
             print(i)
 
@@ -27,7 +27,7 @@ class Simulator:
         self.warnings.append(new_warning)
 
     # This method display the warnings
-    def show_warning(self):
+    def show_warnings(self):
         for i in self.warnings:
             print(i)
 
@@ -88,3 +88,15 @@ class MolarVolume(Variable):
 
         self.value = self.value * self.units_c.at[self.units, MVunits]
         self.units = MVunits
+
+class MolarHeatCapacity(Variable):
+
+    def __init__(self, value, units):
+        super(MolarHeatCapacity, self).__init__(value, units)
+        self.v_type = "Molar heat capacity"
+        self.units_c = None
+
+    def Converter(self, MHCunits):
+
+        self.value = self.value * self.units_c.at[self.units, MHCunits]
+        self.units = MHCunits

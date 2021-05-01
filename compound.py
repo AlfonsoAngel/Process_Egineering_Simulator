@@ -1,8 +1,9 @@
 
 import numpy as np
 from scipy.integrate import quad
+from datetime import datetime
 import pandas as pd
-from Simulator import *
+from simulator import *
 
 S = Simulator()
 ## This file contains the Compound class
@@ -58,14 +59,18 @@ class Compound:
             self.data = None
 
         
-    def CP_liquid(self, T, Report = False, f_output = False):
+    def CP_liquid(self, T, Tunits = "K", Report = False, f_output = False):
         # Liquid heat capacity, Perrys' handobook method.
         # T is a temperature which LCP will be calculated.
         # Report is a boolean, if True, then print the result.
 
         # Convert temperature units into Kelvin.
-        T.Converter("K")
-        self.Tc.Converter("K")
+        if isinstance(T,(int, float)):
+            T = Temperature(T, Tunits)
+
+        else:
+            T.Converter("K")
+            self.Tc.Converter("K")
         # Equation 2 for calculating LCP     
         eq2 = ["1,2-Butanediol", "1,3-Butanediol", "Carbon monoxide", \
                "1,1-Difluoroethane", "Ethane", "Heptane", "Hydrogen", \
@@ -85,36 +90,35 @@ class Compound:
                   - ((C3 **2) * (t ** 3) / 3) - ((C3 * C4) * (t ** 4) / 2) \
                   - ((C4 **2) * (t ** 5) / 5)
             
-            pass
-        
         else:
         # Equation 1
-            CPL = C1 +( C2 * T[0]) +( C3 * (T[0] **2)) +( C4 * (T[0] ** 3)) + (C5 * (T[0] ** 4))
+            CPL = C1 +( C2 * T.value) +( C3 * (T.value**2)) +( C4 * (T.value ** 3)) + (C5 * (T.value ** 4))
             
-        self.CPl = [CPL, 'J/kmol*K']
+        self.CPl = MolarHeatCapacity(CPL, 'J/kmol*K')
         
             
         if Report:
-            print(f'The Liquid Heat Capacity of {self.name} is {self.CPl[0]:,.2f} {self.CPl[1]}')
+            print(f'The Liquid Heat Capacity of {self.name} is {self.CPl.value:,.2f} {self.CPl.units}')
 
         if f_output:
             return CPL#, 'J/kmol*K'
         
     def mean_CP(self, f_CP, T1, T2, units, phase, Report = False):
         # This method calculate de mean heat capacity
-        T1 = U.Temperature_Converter(T1,"K")
-        T2 = U.Temperature_Converter(T2,"K")
-        mCP, err = quad(f_CP, T1[0], T2[0], args = (T1[1], False, True))
-        S.add_warning(f'The integral error for the mean heat capacity of {self.name} is {err:.2e}.') ## ADD TIME
-        
+        T1.Converter("K")
+        T2.Converter("K")
+        mCP, err = quad(f_CP, T1.value, T2.value, args = (T1.units, False, True))
+        S.add_warning(f'{datetime.now().strftime("%H:%M:%S")}: \
+            The integral error for the mean heat capacity of {self.name} is {err:.2e}.')
+
         if phase == "liquid":
-            self.mCPl = [mCP / (T2[0] - T1[0]), units]
+            self.mCPl = MolarHeatCapacity(mCP / (T2.value - T1.value), units)
 
             if Report:
-                print(f'The Mean Liquid Heat Capacity of {self.name} is {self.mCPl[0]:,.2f} {self.mCPl[1]}')
+                print(f'The Mean Liquid Heat Capacity of {self.name} is {self.mCPl.value:,.2f} {self.mCPl.units}')
 
         elif phase == "gas":
-            self.mCPig = [mCP / (T2[0] - T1[0]), units]
+            self.mCPig = [mCP / (T2.value - T1.value), units]
             if Report:
-                print(f'The Mean Ideal gas Heat Capacity of {self.name} is {self.mCPig[0]:,.2f} {self.mCPig[1]}')
+                print(f'The Mean Ideal gas Heat Capacity of {self.name} is {self.mCPig.value:,.2f} {self.mCPig.units}')
             
