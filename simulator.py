@@ -1,57 +1,90 @@
 import pandas as pd
 
 class Simulator:
+    # This class represents the simulator environment 
 
     def __init__(self):
-        self.database = None 
-        self.errors = []
-        self.warnings = []
+        self.database = None #This is de database information
+        self.errors = []    # This is a severe error list
+        self.warnings = []  # This is a warming error list
 
+    # This method loads the Perry's handbook data
     def load_perry(self):
         self.database =  pd.read_csv("./properties/Database.csv",index_col=("Name"))
         return self.database
 
+    # This method add severe errors
     def add_errors(self, new_error):
         self.errors.append(new_error)
 
+    # This method display the errors
     def show_erros(self):
         for i in self.errors:
             print(i)
 
+    # This method add warnings
     def add_warning(self, new_warning):
         self.warnings.append(new_warning)
 
+    # This method display the warnings
     def show_warning(self):
         for i in self.warnings:
             print(i)
 
+class Variable:
+    # This class represents a variable. It could be a process variable or parameters from equations
 
-class  UnitConverter:
+    def __init__(self, value, units):
 
-    def __init__(self):
+        self.value = value      # Variable value
+        self.units = units      # Variable units
+        self.units_c = None     # Variable units database for units convertion
+        self.v_type = ""        # Variable type
 
-        self.Pu = pd.read_csv('./units/Pressure.csv', index_col = 0)   
-        self.Tu = pd.DataFrame({"K":[lambda T: T , lambda T: T + 273.15, lambda T: (T + 459.67) * 5 / 9, lambda T: T * 5 / 9],
+    # This method converts the variable units
+    def Converter(self):
+        pass
+
+class Temperature(Variable):
+    # Variable: Temperature
+
+    def __init__(self, value, units):
+
+          super().__init__(value, units)
+          self.v_type = "Temperature"
+          self.units_c = pd.DataFrame({"K":[lambda T: T , lambda T: T + 273.15, lambda T: (T + 459.67) * 5 / 9, lambda T: T * 5 / 9],
           "°C":[lambda T: T - 273.15, lambda T: T, lambda T: (T - 32) * 5 /9, lambda T: (T - 491.67) * 5 / 9],
           "°F":[lambda T: (T * 9 / 5) -459.67, lambda T: (T * 9 / 5) + 32, lambda T: T, lambda T: T - 459.67],
           "R":[lambda T: T * 9 / 5, lambda T: (T + 273.15) * 9 / 5, lambda T: T + 459.67, lambda T: T]}, 
-          index = ["K", "°C", "°F", "R"]) 
-        self.Vmu = pd.read_csv('./units/MolarVolume.csv', index_col = 0)
+          index = ["K", "°C", "°F", "R"])
 
-        
+    def Converter(self, Tunits):
 
-    def Pressure_Converter(self, P, Punits):
+          self.value = round(self.units_c.at[self.units, Tunits](self.value), 2)
+          self.units = Tunits
+    
+class Pressure(Variable):
+    # Variable: Pressure
 
-        factor = self.Pu.at[P[1], Punits]
-        return [P[0] * factor, Punits]
+    def __init__(self, value, units):
+        super().__init__(value, units)
+        self.v_type = "Pressure"
+        self.units_c = pd.read_csv('./units/Pressure.csv', index_col = 0) 
 
-    def Temperature_Converter(self, T, Tunits):
+    def Converter(self, Punits):
 
-        return [round(self.Tu.at[T[1], Tunits](T[0]), 2), Tunits]
+        self.value = self.value * self.units_c.at[self.units, Punits]
+        self.units = Punits
 
-    def MolarVolume_Converter(self, Vm, Vmunits):
+class MolarVolume(Variable):
+    # Variable: Molar volume
 
-        factor = self.Vmu.at[Vm[1], Vmunits]
-        return [Vm[0] * factor, Vmunits]
+    def __init__(self, value, units):
+        super().__init__(value, units)
+        self.v_type = "MolarVolume"
+        self.units_c = pd.read_csv('./units/MolarVolume.csv', index_col = 0) 
 
+    def Converter(self, MVunits):
 
+        self.value = self.value * self.units_c.at[self.units, MVunits]
+        self.units = MVunits
