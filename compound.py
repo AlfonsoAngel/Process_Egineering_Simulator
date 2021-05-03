@@ -2,6 +2,7 @@
 import numpy as np
 from scipy.integrate import quad
 from datetime import datetime
+from math import sinh, cosh
 import pandas as pd
 from simulator import *
 
@@ -62,7 +63,9 @@ class Compound:
     def CP_liquid(self, T, Tunits = "K", Report = False, f_output = False):
         # Liquid heat capacity, Perrys' handobook method.
         # T is a temperature which LCP will be calculated.
+        # Tunits is the unints for the temperature. This is used for the mean cp method.
         # Report is a boolean, if True, then print the result.
+        # f_output return the function of CP. This is used for the mean cp method
 
         # Convert temperature units into Kelvin.
         if isinstance(T,(int, float)):
@@ -98,27 +101,67 @@ class Compound:
         
             
         if Report:
-            print(f'The Liquid Heat Capacity of {self.name} is {self.CPl.value:,.2f} {self.CPl.units}')
+            print('The Liquid Heat Capacity of {} is {:,.2f} {}'.format(self.name, self.CPl.value, self.CPl.units))
 
         if f_output:
-            return CPL#, 'J/kmol*K'
+            return CPL
+
+    def CP_ig(self, T, Tunits = "K", Report = False, f_output = False):
+        # Ideal Gas heat capacity, Perrys' handobook method.
+        # T is a temperature which IGCP will be calculated.
+        # Tunits is the unints for the temperature. This is used for the mean cp method.
+        # Report is a boolean, if True, then print the result.
+        # f_output return the function of CP. This is used for the mean cp method
+
+        # Convert temperature units into Kelvin.
+        if isinstance(T,(int, float)):
+            T = Temperature(T, Tunits)
+
+        else:
+            T.Converter("K")
+            self.Tc.Converter("K")
+        # Equation 2 for calculating LCP     
+        eq2 = ["Argon", "Helium-4", "Neon", "Nitric oxide"]
+        # Read parameters from the database
+        C1 = self.data.loc[self.name, "CPGC1"]
+        C2 = self.data.loc[self.name, "CPGC2"]
+        C3 = self.data.loc[self.name, "CPGC3"]
+        C4 = self.data.loc[self.name, "CPGC4"]
+        C5 = self.data.loc[self.name, "CPGC5"]
+        # Equaion 2
+        if self.name in eq2:
+            
+            CPIG = C1 + C2 * T.value + C3 * T.value ** 2 + C4 * T.value ** 3 + C5 * T.value ** 4
+            
+        else:
+        # Equation 1
+            CPIG = C1 + C2 * pow((C3 / T.value) / (sinh(C3 / T.value)), 2) + C4 * pow((C5 / T.value) / (cosh(C5 / T.value)), 2)
+            
+        self.CPig = MolarHeatCapacity(CPIG, 'J/kmol*K')
         
+            
+        if Report:
+            print('The Ideal Gas Heat Capacity of {} is {:,.2f} {}'.format(self.name, self.CPig.value, self.CPig.units))
+
+        if f_output:
+            return CPIG        
+
     def mean_CP(self, f_CP, T1, T2, units, phase, Report = False):
         # This method calculate de mean heat capacity
         T1.Converter("K")
         T2.Converter("K")
         mCP, err = quad(f_CP, T1.value, T2.value, args = (T1.units, False, True))
-        S.add_warning(f'{datetime.now().strftime("%H:%M:%S")}: \
-            The integral error for the mean heat capacity of {self.name} is {err:.2e}.')
+        S.add_warning('{}: The integral error for the mean heat capacity of {} is {:.2e}.'\
+            .format(datetime.now().strftime("%H:%M:%S"), self.name, err))
 
         if phase == "liquid":
             self.mCPl = MolarHeatCapacity(mCP / (T2.value - T1.value), units)
 
             if Report:
-                print(f'The Mean Liquid Heat Capacity of {self.name} is {self.mCPl.value:,.2f} {self.mCPl.units}')
+                print('The Mean Liquid Heat Capacity of {} is {:,.2f} {}'.format(self.name, self.mCPl.value, self.mCPlunits))
 
         elif phase == "gas":
             self.mCPig = [mCP / (T2.value - T1.value), units]
             if Report:
-                print(f'The Mean Ideal gas Heat Capacity of {self.name} is {self.mCPig.value:,.2f} {self.mCPig.units}')
+                print('The Mean Ideal Gas Heat Capacity of {} is {:,.2f} {}'.format(self.name, self.mCPig.Value, self.mCPig.units))
             
