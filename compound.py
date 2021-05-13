@@ -14,7 +14,9 @@ class Compound:
         
         self.name = name            # Compound name
         # Pure properties
-        self.mw = mw                # molecular weight
+        self.mw = MolarWeight(mw)                # molecular weight
+        self.mole_frac = 1.0 # mol fraction
+        self.mass_frac = 1.0 # mass fraction
         self.Hig_f = None   # ideal gas enthalpy of formation
         self.Gig_f = None   # ideal gas Gibbs free energy of formation
         self.Sig = None     # ideal gas entropy
@@ -39,16 +41,17 @@ class Compound:
         self.LiqVis = None  # liquid viscosity
         self.GasTC = None   # gas thermal conductivity
         self.LiqTC = None   # liquid therml conductivity
+        
 
         if Perry:
             # data
             self.data = S.load_perry()
             # Pure compound proprerties
-            self.wt = self.data.at[self.name, "wt"]
-            self.Hig_f = [self.data.at[self.name, "Hig_f"], "kJ/mol"]
-            self.Gig_f = [self.data.at[self.name, "Gig_f"], "kJ/mol"]
-            self.Sig = [self.data.at[self.name, "Sig"], "kJ/mol*K"]
-            self.Hstd_c = [self.data.at[self.name, "Hstd_c"], "kJ/mol"]
+            self.wt = MolarWeight(self.data.at[self.name, "wt"])
+            self.Hig_f = MolarEnthalpy(self.data.at[self.name, "Hig_f"], "kJ/mol")
+            self.Gig_f = MolarGibbs(self.data.at[self.name, "Gig_f"], "kJ/mol")
+            self.Sig = MolarEntropy(self.data.at[self.name, "Sig"], "kJ/mol*K")
+            self.Hstd_c = MolarEnthalpy(self.data.at[self.name, "Hstd_c"], "kJ/mol")
             # Critical properties from Perry's handbook
             self.Tc = Temperature(self.data.at[self.name, "Tc"], "K")
             self.Pc = Pressure(self.data.at[self.name, "Pc"], "MPa")
@@ -151,8 +154,6 @@ class Compound:
         T1.Converter("K")
         T2.Converter("K")
         mCP, err = quad(f_CP, T1.value, T2.value, args = (T1.units, False, True))
-        S.add_warning('{}: The integral error for the mean heat capacity of {} is {:.2e}.'\
-            .format(datetime.now().strftime("%H:%M:%S"), self.name, err))
 
         if phase == "liquid":
             self.mCPl = MolarHeatCapacity(mCP / (T2.value - T1.value), units)
@@ -161,7 +162,26 @@ class Compound:
                 print('The Mean Liquid Heat Capacity of {} is {:,.2f} {}'.format(self.name, self.mCPl.value, self.mCPlunits))
 
         elif phase == "gas":
-            self.mCPig = [mCP / (T2.value - T1.value), units]
+            self.mCPig = MolarHeatCapacity(mCP / (T2.value - T1.value), units)
             if Report:
-                print('The Mean Ideal Gas Heat Capacity of {} is {:,.2f} {}'.format(self.name, self.mCPig.Value, self.mCPig.units))
+                print('The Mean Ideal Gas Heat Capacity of {} is {:,.2f} {}'.format(self.name, self.mCPig.value, self.mCPig.units))
+
+    def Vapor_pressure(self, T, Report = False):
+        # This method calculates the vapor pressure of a compound.
+        # T is the temperature for the calculations.
+        # Report is a boolean for printing the result.
+        T.Converter("K")
+        # Read parameters from the database
+        C1 = float(self.data.loc[self.name, "VPC1"])
+        C2 = float(self.data.loc[self.name, "VPC2"])
+        C3 = float(self.data.loc[self.name, "VPC3"])
+        C4 = float(self.data.loc[self.name, "VPC4"])
+        C5 = float(self.data.loc[self.name, "VPC5"])
+        # Equation
+        Psat = np.exp(C1 + (C2 / T.value) + (C3 * np.log(T.value)) + C4 * (T.value ** C5))
+        
+        self.Pvap = Pressure(Psat, 'Pa')
+
+        if Report:
+            print('The Vapor Pressure of {} is {:,.0f} {}'.format(self.name, self.Pvap.value, self.Pvap.units))
             

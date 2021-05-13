@@ -13,24 +13,6 @@ class Simulator:
         self.database =  pd.read_csv("./properties/Database.csv",index_col=("Name"))
         return self.database
 
-    # This method add severe errors
-    def add_error(self, new_error):
-        self.errors.append(new_error)
-
-    # This method display the errors
-    def show_errors(self):
-        for i in self.errors:
-            print(i)
-
-    # This method add warnings
-    def add_warning(self, new_warning):
-        self.warnings.append(new_warning)
-
-    # This method display the warnings
-    def show_warnings(self):
-        for i in self.warnings:
-            print(i)
-
 class Variable:
     # This class represents a variable. It could be a process variable or parameters from equations
 
@@ -92,7 +74,7 @@ class MolarVolume(Variable):
 class MolarHeatCapacity(Variable):
 
     def __init__(self, value, units):
-        super(MolarHeatCapacity, self).__init__(value, units)
+        super().__init__(value, units)
         self.v_type = "Molar heat capacity"
         self.units_c = None
 
@@ -100,3 +82,46 @@ class MolarHeatCapacity(Variable):
 
         self.value = self.value * self.units_c.at[self.units, MHCunits]
         self.units = MHCunits
+
+class MolarEnthalpy(Variable):
+
+    def __init__(self, value, units):
+        super().__init__(value, units)
+        self.v_type = "Molar enthalpy"
+        self.units_c = None
+
+    def Converter(self, MHunits):
+
+        self.value = self.value * self.units_c.at[self.units, MHunits]
+        self.units = MHunits
+
+class MolarGibbs(Variable):
+
+    def __init__(self, value, units):
+        super().__init__(value, units)
+        self.v_type = "Molar Gibbs energy"
+        self.units_c = None
+
+    def Converter(self, MGunits):
+
+        self.value = self.value * self.units_c.at[self.units, MGunits]
+        self.units = MGunits  
+
+class MolarEntropy(Variable):
+
+    def __init__(self, value, units):
+        super().__init__(value, units)
+        self.v_type = "Molar entropy"
+        self.units_c = None
+
+    def Converter(self, MSunits):
+
+        self.value = self.value * self.units_c.at[self.units, MSunits]
+        self.units = MSunits 
+
+class MolarWeight(Variable):
+
+    def __init__(self, value):
+        super().__init__(value, "None")
+        self.v_type = "Molar weight"
+        self.units_c = None
